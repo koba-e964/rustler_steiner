@@ -11,4 +11,5 @@ crate-type = ["dylib"]
 
 [dependencies]
 rustler = "0.21.1"
+rustler_sys = "~2.1"
 lazy_static = "1.0"

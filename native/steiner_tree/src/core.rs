@@ -25,14 +25,20 @@ impl Encoder for Error {
 pub(crate) struct State {
     n: usize,
     edges: Vec<(usize, usize)>,
+    rem: usize,
 }
 
 impl State {
     pub(crate) fn new(n: usize, edges: Vec<(usize, usize)>) -> State {
-        Self { n, edges }
+        Self { n, edges, rem: 1 }
     }
 }
 
-pub(crate) fn compute(state: State) -> Ret {
-    Ret::Error(Error::InvalidArg(state.n, state.edges))
+pub(crate) fn compute(mut state: State) -> Ret {
+    if state.rem > 0 {
+        state.rem -= 1;
+        Ret::Yielding(state)
+    } else {
+        Ret::Error(Error::InvalidArg(state.n, state.edges))
+    }
 }

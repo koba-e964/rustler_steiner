@@ -156,6 +156,7 @@ version = "0.1.0"
 dependencies = [
  "lazy_static",
  "rustler",
+ "rustler_sys",
 ]
 
 [[package]]
