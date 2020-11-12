@@ -23,8 +23,12 @@ rustler::rustler_export_nifs! {
     None
 }
 
-unsafe extern "C" fn steiner_tree_interrupted(env: NIF_ENV, _: i32, _: *const NIF_TERM) -> NIF_TERM {
-    rustler_sys::enif_make_int(env, 42)
+unsafe extern "C" fn steiner_tree_interrupted(
+    env: NIF_ENV,
+    _argc: i32,
+    _argv: *const NIF_TERM,
+) -> NIF_TERM {
+    rustler_sys::enif_make_int64(env, 42)
 }
 
 /// Computes a Steiner tree of a given graph.
@@ -41,11 +45,13 @@ fn steiner_tree<'a>(env: Env<'a>, args: &[Term<'a>]) -> Result<Term<'a>, Error> 
         Ret::Yielding(state) => unsafe {
             let result = NifReturned::Reschedule {
                 fun_name: CString::new("steiner_tree_interrupted").unwrap(),
-                flags: SchedulerFlags::DirtyCpu,
+                flags: SchedulerFlags::Normal,
                 fun: steiner_tree_interrupted,
                 args: vec![],
             };
-            Ok(result.apply(env).encode(env))
+            // NOTE: result.apply(env).encode(env) won't work here:
+            // NIF_TERM is just an alias of usize, so it would return the Erlang representation of an integer 0.
+            Ok(unsafe { Term::new(env, result.apply(env)) })
         },
     }
 }
