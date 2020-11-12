@@ -25,3 +25,6 @@ rustler_steiner-*.tar
 
 # Temporary files for e.g. tests
 /tmp
+
+/priv
+target
