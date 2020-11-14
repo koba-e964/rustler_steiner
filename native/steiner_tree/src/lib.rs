@@ -1,4 +1,5 @@
 mod core;
+mod error;
 mod state;
 
 use rustler::codegen_runtime::{NifReturned, NIF_ENV, NIF_TERM};
