@@ -20,20 +20,34 @@ pub(crate) fn encode_state_ptr_as_NIF_TERM(ptr: *mut State) -> NIF_TERM {
     ptr as usize
 }
 
+/// # Safety
+/// This functions is currently always safe. It is marked unsafe just in case.
 #[allow(non_snake_case)]
 pub(crate) unsafe fn decode_state_ptr_from_NIF_TERM(term: NIF_TERM) -> *mut State {
     // TODO: better representation using resource.
     term as _
 }
 
-pub(crate) unsafe fn create_state(n: usize, edges: Vec<(usize, usize)>) -> *mut State {
+/// Creates a state using NIF functions provided by Erlang.
+/// Returns None if allocation failed.
+pub(crate) fn create_state(n: usize, edges: Vec<(usize, usize)>) -> Option<*mut State> {
     let state = State::new(n, edges);
     // Allocate space for State
-    let ptr: *mut State = rustler_sys::enif_alloc(std::mem::size_of::<State>()) as _;
-    std::ptr::write(ptr, state);
-    ptr
+    // TODO: better representation using resource.
+    let ptr: *mut State;
+    unsafe {
+        ptr = rustler_sys::enif_alloc(std::mem::size_of::<State>()) as _;
+        if ptr.is_null() {
+            return None;
+        }
+        std::ptr::write(ptr, state);
+    }
+    Some(ptr)
 }
 
+/// # Safety
+/// - ptr should be the pointer created by create_state
+/// - ptr must point to the valid State
 pub(crate) unsafe fn destroy_state(ptr: *mut State) {
     std::ptr::drop_in_place(ptr);
     rustler_sys::enif_free(ptr as *mut ::core::ffi::c_void)

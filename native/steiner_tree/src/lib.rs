@@ -46,14 +46,21 @@ fn steiner_tree<'a>(env: Env<'a>, args: &[Term<'a>]) -> Result<Term<'a>, Error> 
     let n: usize = args[0].decode()?;
     let edges: Vec<(usize, usize)> = args[1].decode()?;
 
-    let ptr = unsafe { create_state(n, edges) };
+    let ptr = if let Some(ptr) = create_state(n, edges) {
+        ptr
+    } else {
+        return Err(Error::RaiseAtom("bad_alloc"));
+    };
 
-    Ok(steiner_tree_yielding(env, ptr))
+    Ok(unsafe { steiner_tree_yielding(env, ptr) })
 }
 
-fn steiner_tree_yielding(env: Env<'_>, ptr: *mut State) -> Term<'_> {
+/// # Safety
+/// - ptr should be the pointer created by create_state
+/// - ptr must point to the valid State
+unsafe fn steiner_tree_yielding(env: Env<'_>, ptr: *mut State) -> Term<'_> {
     let result;
-    unsafe {
+    {
         let state = &mut *ptr;
         result = compute(state);
     }
@@ -61,16 +68,12 @@ fn steiner_tree_yielding(env: Env<'_>, ptr: *mut State) -> Term<'_> {
     match result {
         Ret::Ok(result) => {
             // destroy the state
-            unsafe {
-                destroy_state(ptr);
-            }
+            destroy_state(ptr);
             (atoms::ok(), result).encode(env)
         }
         Ret::Error(e) => {
             // destroy the state
-            unsafe {
-                destroy_state(ptr);
-            }
+            destroy_state(ptr);
             (atoms::error(), e).encode(env)
         }
         Ret::Yielding => {
@@ -83,7 +86,7 @@ fn steiner_tree_yielding(env: Env<'_>, ptr: *mut State) -> Term<'_> {
             };
             // NOTE: result.apply(env).encode(env) won't work here:
             // NIF_TERM is just an alias of usize, so it would return the Erlang representation of an integer 0.
-            unsafe { Term::new(env, result.apply(env)) }
+            Term::new(env, result.apply(env))
         }
     }
 }
