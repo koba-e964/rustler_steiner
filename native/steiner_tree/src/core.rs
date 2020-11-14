@@ -16,24 +16,16 @@ const INFINITY: usize = std::usize::MAX / 2;
 
 pub(crate) fn compute(state: &mut State) -> Ret {
     let n = state.n;
-    let m = state.edges.len();
     let k = state.terms.len();
     let terms = &state.terms;
-    if k >= 20 {
+    if k >= 30 {
         return Ret::Error(Error::TooLargeInput(n));
     }
     let mut count: i64 = n as i64;
     for _ in 0..k {
-        count = count.saturating_mul(3);
-    }
-    if count >= 10_000_000 {
-        return Ret::Error(Error::TooLargeInput(n));
-    }
-    let mut count: i64 = m as i64;
-    for _ in 0..k {
         count = count.saturating_mul(2);
     }
-    if count >= 10_000_000 {
+    if count >= 40_000_000 {
         return Ret::Error(Error::TooLargeInput(n));
     }
     // Validation of arguments
@@ -68,17 +60,24 @@ pub(crate) fn compute(state: &mut State) -> Ret {
         1 => {
             let dp = &mut state.dp;
             let pre = &mut state.pre;
+            for i in 0..k {
+                dp[terms[i]][1 << i] = 0;
+                pre[terms[i]][1 << i] = (0, 0);
+            }
+            state.phase = 2;
+            state.loop_index = 1;
+            return Ret::Yielding;
+        }
+        2 => {
+            let dp = &mut state.dp;
+            let pre = &mut state.pre;
             let mut g = vec![vec![]; n];
             for &(x, y) in &state.edges {
                 g[x].push((y, 1));
                 g[y].push((x, 1));
             }
-            for i in 0..k {
-                dp[terms[i]][1 << i] = 0;
-                pre[terms[i]][1 << i] = (0, 0);
-            }
-            // TODO: separate into chunks
-            for s in 1..1 << k {
+            // separated into chunks
+            for s in state.loop_index..1 << k {
                 // collect: dp[i][s] <- dp[i][t] + dp[i][s \ t]
                 for i in 0..n {
                     for t in subsets(s) {
@@ -108,6 +107,8 @@ pub(crate) fn compute(state: &mut State) -> Ret {
                         que.push((Reverse(new_dist), w));
                     }
                 }
+                state.loop_index += 1;
+                return Ret::Yielding;
             }
             let mut mi = (INFINITY, 0);
             for i in 0..n {

@@ -12,6 +12,7 @@ pub(crate) struct State {
     /// pre[i][s] = (3, 0): dp[i][s] is not reached
     pub pre: Vec<Vec<(i32, usize)>>,
     pub phase: usize,
+    pub loop_index: usize,
 }
 
 impl State {
@@ -23,6 +24,7 @@ impl State {
             dp: vec![],
             pre: vec![],
             phase: 0,
+            loop_index: 0,
         }
     }
 }
