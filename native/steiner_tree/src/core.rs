@@ -1,6 +1,7 @@
 use rustler::Encoder;
 
 use crate::atoms;
+use crate::state::State;
 
 pub(crate) enum Ret {
     Ok(Vec<(usize, usize)>),
@@ -20,19 +21,6 @@ impl Encoder for Error {
             Error::TooLargeInput(n) => (atoms::too_large_input(), n).encode(env),
             Error::InvalidArg(n, edges) => (atoms::invalid_arg(), (n, edges)).encode(env),
         }
-    }
-}
-
-#[derive(Debug)]
-pub(crate) struct State {
-    n: usize,
-    edges: Vec<(usize, usize)>,
-    rem: usize,
-}
-
-impl State {
-    pub(crate) fn new(n: usize, edges: Vec<(usize, usize)>) -> State {
-        Self { n, edges, rem: 1 }
     }
 }
 

@@ -1,10 +1,15 @@
 mod core;
+mod state;
 
 use rustler::codegen_runtime::{NifReturned, NIF_ENV, NIF_TERM};
 use rustler::{Encoder, Env, Error, SchedulerFlags, Term};
 use std::ffi::CString;
 
-use crate::core::{compute, Ret, State};
+use crate::core::{compute, Ret};
+use crate::state::{
+    create_state, decode_state_ptr_from_NIF_TERM, destroy_state, encode_state_ptr_as_NIF_TERM,
+    State,
+};
 
 mod atoms {
     rustler::rustler_atoms! {
@@ -40,20 +45,17 @@ fn steiner_tree<'a>(env: Env<'a>, args: &[Term<'a>]) -> Result<Term<'a>, Error> 
     let n: usize = args[0].decode()?;
     let edges: Vec<(usize, usize)> = args[1].decode()?;
 
-    let state = State::new(n, edges);
-    // Allocate space for State
-    let ptr: *mut State = unsafe { rustler_sys::enif_alloc(std::mem::size_of::<State>()) as _ };
-    unsafe {
-        std::ptr::write(ptr, state);
-    }
+    let ptr = unsafe { create_state(n, edges) };
 
     Ok(steiner_tree_yielding(env, ptr))
 }
 
-fn steiner_tree_yielding<'a>(env: Env<'a>, ptr: *mut State) -> Term<'a> {
-    let state = unsafe { &mut *ptr };
-    let result = compute(state);
-    drop(state);
+fn steiner_tree_yielding(env: Env<'_>, ptr: *mut State) -> Term<'_> {
+    let result;
+    unsafe {
+        let state = &mut *ptr;
+        result = compute(state);
+    }
 
     match result {
         Ret::Ok(result) => {
@@ -83,22 +85,4 @@ fn steiner_tree_yielding<'a>(env: Env<'a>, ptr: *mut State) -> Term<'a> {
             unsafe { Term::new(env, result.apply(env)) }
         }
     }
-}
-
-#[allow(non_snake_case)]
-fn encode_state_ptr_as_NIF_TERM(ptr: *mut State) -> NIF_TERM {
-    // TODO: better representation using resource.
-    // We need to register the resource type we use in load/0 beforehand.
-    ptr as usize
-}
-
-#[allow(non_snake_case)]
-unsafe fn decode_state_ptr_from_NIF_TERM(term: NIF_TERM) -> *mut State {
-    // TODO: better representation using resource.
-    term as _
-}
-
-unsafe fn destroy_state(ptr: *mut State) {
-    std::ptr::drop_in_place(ptr);
-    rustler_sys::enif_free(ptr as *mut ::core::ffi::c_void)
 }
