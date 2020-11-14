@@ -27,6 +27,7 @@ rustler::rustler_export_nifs! {
     "Elixir.SteinerTree",
     [
         ("compute", 3, steiner_tree),
+        ("compute_nonyielding", 3, steiner_tree_nonyielding),
     ],
     None
 }
@@ -56,6 +57,30 @@ fn steiner_tree<'a>(env: Env<'a>, args: &[Term<'a>]) -> Result<Term<'a>, Error> 
     };
 
     Ok(unsafe { steiner_tree_yielding(env, ptr) })
+}
+
+/// Computes a Steiner tree of a given graph. This version will never yield.
+fn steiner_tree_nonyielding<'a>(env: Env<'a>, args: &[Term<'a>]) -> Result<Term<'a>, Error> {
+    let n: usize = args[0].decode()?;
+    let edges: Vec<(usize, usize)> = args[1].decode()?;
+    let terms: Vec<usize> = args[2].decode()?;
+
+    let mut state = State::new(n, edges, terms);
+
+    let result = loop {
+        match compute(&mut state) {
+            Ret::Ok(ans, picked_edges) => {
+                // destroy the state
+                break (atoms::ok(), (ans, picked_edges)).encode(env);
+            }
+            Ret::Error(e) => {
+                // destroy the state
+                break (atoms::error(), e).encode(env);
+            }
+            Ret::Yielding => {}
+        }
+    };
+    Ok(result)
 }
 
 /// # Safety
