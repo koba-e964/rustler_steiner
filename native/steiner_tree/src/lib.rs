@@ -1,6 +1,7 @@
 mod core;
 mod error;
 mod state;
+mod subsets;
 
 use rustler::codegen_runtime::{NifReturned, NIF_ENV, NIF_TERM};
 use rustler::{Encoder, Env, Error, SchedulerFlags, Term};
@@ -24,7 +25,7 @@ mod atoms {
 rustler::rustler_export_nifs! {
     "Elixir.SteinerTree",
     [
-        ("compute", 2, steiner_tree),
+        ("compute", 3, steiner_tree),
     ],
     None
 }
@@ -45,8 +46,9 @@ unsafe extern "C" fn steiner_tree_interrupted(
 fn steiner_tree<'a>(env: Env<'a>, args: &[Term<'a>]) -> Result<Term<'a>, Error> {
     let n: usize = args[0].decode()?;
     let edges: Vec<(usize, usize)> = args[1].decode()?;
+    let terms: Vec<usize> = args[2].decode()?;
 
-    let ptr = if let Some(ptr) = create_state(n, edges) {
+    let ptr = if let Some(ptr) = create_state(n, edges, terms) {
         ptr
     } else {
         return Err(Error::RaiseAtom("bad_alloc"));
@@ -66,10 +68,10 @@ unsafe fn steiner_tree_yielding(env: Env<'_>, ptr: *mut State) -> Term<'_> {
     }
 
     match result {
-        Ret::Ok(result) => {
+        Ret::Ok(ans, picked_edges) => {
             // destroy the state
             destroy_state(ptr);
-            (atoms::ok(), result).encode(env)
+            (atoms::ok(), (ans, picked_edges)).encode(env)
         }
         Ret::Error(e) => {
             // destroy the state

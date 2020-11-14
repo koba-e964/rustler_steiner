@@ -4,12 +4,20 @@ use rustler::codegen_runtime::NIF_TERM;
 pub(crate) struct State {
     pub n: usize,
     pub edges: Vec<(usize, usize)>,
-    pub rem: usize,
+    pub terms: Vec<usize>,
+    pub dp: Vec<Vec<usize>>,
+    pub phase: usize,
 }
 
 impl State {
-    pub(crate) fn new(n: usize, edges: Vec<(usize, usize)>) -> State {
-        Self { n, edges, rem: 1 }
+    pub(crate) fn new(n: usize, edges: Vec<(usize, usize)>, terms: Vec<usize>) -> State {
+        Self {
+            n,
+            edges,
+            terms,
+            dp: vec![],
+            phase: 0,
+        }
     }
 }
 
@@ -30,8 +38,12 @@ pub(crate) unsafe fn decode_state_ptr_from_NIF_TERM(term: NIF_TERM) -> *mut Stat
 
 /// Creates a state using NIF functions provided by Erlang.
 /// Returns None if allocation failed.
-pub(crate) fn create_state(n: usize, edges: Vec<(usize, usize)>) -> Option<*mut State> {
-    let state = State::new(n, edges);
+pub(crate) fn create_state(
+    n: usize,
+    edges: Vec<(usize, usize)>,
+    terms: Vec<usize>,
+) -> Option<*mut State> {
+    let state = State::new(n, edges, terms);
     // Allocate space for State
     // TODO: better representation using resource.
     let ptr: *mut State;
