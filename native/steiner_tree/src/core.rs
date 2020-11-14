@@ -5,7 +5,8 @@ use crate::atoms;
 pub(crate) enum Ret {
     Ok(Vec<(usize, usize)>),
     Error(Error),
-    Yielding(State),
+    /// Aborting the computation. state is mutated. The caller should save state for later invocations.
+    Yielding,
 }
 
 pub(crate) enum Error {
@@ -22,6 +23,7 @@ impl Encoder for Error {
     }
 }
 
+#[derive(Debug)]
 pub(crate) struct State {
     n: usize,
     edges: Vec<(usize, usize)>,
@@ -34,11 +36,11 @@ impl State {
     }
 }
 
-pub(crate) fn compute(mut state: State) -> Ret {
+pub(crate) fn compute(state: &mut State) -> Ret {
     if state.rem > 0 {
         state.rem -= 1;
-        Ret::Yielding(state)
+        Ret::Yielding
     } else {
-        Ret::Error(Error::InvalidArg(state.n, state.edges))
+        Ret::Error(Error::InvalidArg(state.n, state.edges.clone()))
     }
 }
