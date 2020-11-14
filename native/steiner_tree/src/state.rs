@@ -6,6 +6,11 @@ pub(crate) struct State {
     pub edges: Vec<(usize, usize)>,
     pub terms: Vec<usize>,
     pub dp: Vec<Vec<usize>>,
+    /// pre[i][s] = (0, 0): (i, s) is the initial state
+    /// pre[i][s] = (1, x): x <= s and dp[i][s] = dp[i][x] + dp[i][s - x]
+    /// pre[i][s] = (2, y): dp[i][s] = dp[y][s] + cost(y, i)
+    /// pre[i][s] = (3, 0): dp[i][s] is not reached
+    pub pre: Vec<Vec<(i32, usize)>>,
     pub phase: usize,
 }
 
@@ -16,6 +21,7 @@ impl State {
             edges,
             terms,
             dp: vec![],
+            pre: vec![],
             phase: 0,
         }
     }

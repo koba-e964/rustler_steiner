@@ -19,6 +19,7 @@ mod atoms {
         atom error;
         atom too_large_input;
         atom invalid_arg;
+        atom terminal_not_connected;
     }
 }
 
