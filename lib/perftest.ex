@@ -3,46 +3,59 @@
 
 defmodule PerfTest do
   def realtime_test() do
-    n = 12
+    n = 11
     edges = for i <- :lists.seq(0, n - 2), do: {i, i + 1}
     terms = :lists.seq(0, n - 1)
 
-    spawn_link(fn ->
-      realtime_worker(fn -> SteinerTree.compute(n, edges, terms) end)
-    end)
+    for i <- :lists.seq(1, 10),
+        do:
+          spawn_link(fn ->
+            realtime_worker(i, fn -> SteinerTree.compute(n, edges, terms) end)
+          end)
 
     spawn_link(fn ->
-      realtime_printer(:os.system_time())
+      realtime_printer("yielding", :os.system_time())
     end)
   end
 
   def realtime_nonyielding_test() do
-    n = 7
+    n = 8
     edges = for i <- :lists.seq(0, n - 2), do: {i, i + 1}
     terms = :lists.seq(0, n - 1)
 
-    spawn_link(fn ->
-      realtime_worker(fn -> SteinerTree.compute_nonyielding(n, edges, terms) end)
-    end)
+    for i <- :lists.seq(1, 10),
+        do:
+          spawn_link(fn ->
+            realtime_worker(i, fn -> SteinerTree.compute_nonyielding(n, edges, terms) end)
+          end)
 
     spawn_link(fn ->
-      realtime_printer(:os.system_time())
+      realtime_printer("nonyielding", :os.system_time())
     end)
   end
 
-  def realtime_worker(fun) do
+  def realtime_worker(index, fun) do
     fun.()
-    realtime_worker(fun)
+
+    IO.write([
+      "[",
+      Integer.to_string(index),
+      "]"
+    ])
+
+    realtime_worker(index, fun)
   end
 
-  def realtime_printer(last_run) do
+  def realtime_printer(name, last_run) do
     :timer.sleep(1000)
     delta = :os.system_time() - last_run
     delta_ms = delta / 1_000_000
     jitter_ms = 1000.0 - delta_ms
 
     IO.puts([
-      "Time since last schedule:",
+      "\n[",
+      name,
+      "]: Time since last schedule:",
       Float.to_string(delta_ms),
       " ms, ",
       "jitter: ",
@@ -50,6 +63,6 @@ defmodule PerfTest do
       " ms"
     ])
 
-    realtime_printer(:os.system_time())
+    realtime_printer(name, :os.system_time())
   end
 end
